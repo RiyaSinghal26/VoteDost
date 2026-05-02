@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voter-Dost Pro | Elite Election Process Educator</title>
+    <meta name="description" content="Your elite, AI-driven election education assistant. Learn how to vote in India with personalized roadmaps, booth simulations, and myth-busting.">
+    
+    <!-- PWA & Mobile -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff9933">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/bottts/svg?seed=VoterDost">
+    
+    <!-- Security: CSP (Allowing trusted CDNs) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://api.dicebear.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' https://api.dicebear.com data:; connect-src 'self' https://api.dicebear.com;">
+
+    <link rel="stylesheet" href="styles.css?v=elite">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Animated Cyber Background -->
+    <div class="cyber-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Command Palette (Ctrl+K) -->
+    <div class="cmd-palette" id="cmdPalette" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="cmd-box glass">
+            <div class="cmd-input-wrap">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="cmdInput" placeholder="Type a command... (e.g. 'home', 'roadmap', 'light')" aria-label="Command search">
+            </div>
+            <div class="cmd-results" id="cmdResults">
+                <!-- Dynamic results -->
+            </div>
+            <div class="cmd-footer">
+                <span><kbd>↵</kbd> Select</span>
+                <span><kbd>↑↓</kbd> Navigate</span>
+                <span><kbd>esc</kbd> Close</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-shell">
+
+        <!-- ═══ SIDEBAR ═══ -->
+        <aside class="sidebar glass">
+            <div class="logo">
+                <i class="fa-solid fa-check-to-slot"></i>
+                <h2>Voter-Dost</h2>
+                <span class="badge">PRO</span>
+            </div>
+
+            <ul class="nav-list" role="navigation" aria-label="Main Navigation">
+                <li class="nav-item active" data-view="home" tabindex="0" role="button" aria-label="Go to Home"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</li>
+                <li class="nav-item" data-view="roadmap" tabindex="0" role="button" aria-label="View Your Roadmap"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> Your Roadmap</li>
+                <li class="nav-item" data-view="boothsim" tabindex="0" role="button" aria-label="Open Booth Simulation"><i class="fa-solid fa-person-booth" aria-hidden="true"></i> Booth-Sim</li>
+                <li class="nav-item" data-view="mythbuster" tabindex="0" role="button" aria-label="View Myth-Busters"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Myth-Busters</li>
+            </ul>
+
+            <div class="profile-widget" aria-live="polite">
+                <p class="widget-label">Your Profile</p>
+                <span class="profile-chip" id="profileChip">Not Set</span>
+            </div>
+
+            <div class="assistant-panel" role="complementary" aria-label="Voter-Dost Assistant">
+                <div class="assistant-head">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=VoterDost" alt="Voter-Dost Avatar" class="assistant-img">
+                    <span class="assistant-name">Voter-Dost says</span>
+                </div>
+                <p class="assistant-text" id="assistantText" aria-live="polite">Select your profile to get started! Let's get that ink on your finger. 👆</p>
+                <div id="assistantFooter" class="assistant-footer">
+                    <span class="pro-tip">💡 Voting is your superpower!</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ═══ MAIN ═══ -->
+        <main class="main-area" id="mainContent">
+
+            <!-- Header -->
+            <header class="top-bar glass">
+                <div>
+                    <h1 class="page-title" id="pageTitle">Welcome to Voter-Dost! 🇮🇳</h1>
+                    <p class="page-sub" id="pageSub">Your Elite Election Process Educator</p>
+                </div>
+                <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Switch to light mode">
+                    <i class="fa-solid fa-moon" aria-hidden="true"></i>
+                </button>
+            </header>
+
+            <!-- Views -->
+            <div class="view-wrap">
+
+                <!-- HOME -->
+                <section class="view active" id="view-home" aria-labelledby="pageTitle">
+                    <div class="glass hero-box">
+                        <h2 class="hero-heading">Namaste! 🙏 Welcome to the ultimate voter guide.</h2>
+                        <p class="hero-sub">I am <strong>Voter-Dost</strong>, your personal election process educator. My mission? Make voting super easy, jargon-free, and fun! 🗳️</p>
+                        <h3 class="pick-label">First, tell me who you are 🤔</h3>
+                        <div class="profile-cards" id="profileCards" role="radiogroup" aria-label="Select your voter profile">
+                            <div class="pcard" data-profile="first-time" tabindex="0" role="radio" aria-checked="false" aria-label="First-Time Voter">
+                                <span class="pcard-icon" aria-hidden="true">🎓</span>
+                                <h4>First-Time Voter</h4>
+                                <p>Ready to make your mark for the very first time!</p>
+                            </div>
+                            <div class="pcard" data-profile="senior" tabindex="0" role="radio" aria-checked="false" aria-label="Senior Citizen">
+                                <span class="pcard-icon" aria-hidden="true">🧓</span>
+                                <h4>Senior Citizen</h4>
+                                <p>Experienced voter looking for seamless voting options.</p>
+                            </div>
+                            <div class="pcard" data-profile="student" tabindex="0" role="radio" aria-checked="false" aria-label="Curious Student">
+                                <span class="pcard-icon" aria-hidden="true">📚</span>
+                                <h4>Curious Student</h4>
+                                <p>Eager to understand how the great democratic machinery works!</p>
+                            </div>
+                        </div>
+
+                        <div class="quiz-teaser">
+                            <p>Not sure? Let me help you find the perfect profile!</p>
+                            <button class="btn btn-ghost" id="startQuiz">Take the 30s Quiz 🧠</button>
+                        </div>
+
+                        <!-- Quiz Modal Container -->
+                        <div class="quiz-overlay" id="quizOverlay" aria-hidden="true">
+                            <div class="quiz-box glass">
+                                <div id="quizContent">
+                                    <!-- Dynamic Quiz -->
+                                </div>
+                                <button class="btn-close-quiz" id="closeQuiz">×</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ROADMAP -->
+                <section class="view" id="view-roadmap">
+                    <div class="glass content-box">
+                        <h2>📍 Your Journey to the Ballot</h2>
+                        <p id="roadmapIntro" class="content-sub">Let's walk through the exact steps you need to take.</p>
+                        <div class="timeline" id="roadmapTimeline"></div>
+                    </div>
+                </section>
+
+                <!-- BOOTH-SIM -->
+                <section class="view" id="view-boothsim">
+                    <div class="glass content-box">
+                        <h2>🏛️ Booth-Sim: Virtual Walkthrough</h2>
+                        <p class="content-sub">Nervous about what happens inside the polling booth? Let's practice!</p>
+
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar" id="simProgressBar"></div>
+                        </div>
+
+                        <div class="sim-steps-bar" id="simStepsBar">
+                            <div class="sim-tab active" data-step="1">1. Entry</div>
+                            <div class="sim-tab" data-step="2">2. ID Check</div>
+                            <div class="sim-tab" data-step="3">3. The Ink</div>
+                            <div class="sim-tab" data-step="4">4. Voting</div>
+                        </div>
+
+                        <div class="sim-stage glass-inner" id="simStage">
+                            <!-- Populated by JS -->
+                        </div>
+
+                        <div class="sim-controls">
+                            <button class="btn btn-ghost" id="btnBack" disabled>← Back</button>
+                            <button class="btn btn-primary" id="btnNext">Next Step ➡️</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MYTH-BUSTERS -->
+                <section class="view" id="view-mythbuster">
+                    <div class="glass content-box">
+                        <h2>🛡️ Myth-Buster Engine</h2>
+                        <p class="content-sub">Clearing up common election misinformation. Official ECI rules only! ✅ <em>Hover cards to reveal the truth.</em></p>
+                        <div class="myth-grid" id="mythGrid"></div>
+                    </div>
+                </section>
+
+            </div><!-- /.view-wrap -->
+        </main>
+    </div><!-- /.app-shell -->
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <script src="script.js?v=final"></script>
+</body>
+</html>

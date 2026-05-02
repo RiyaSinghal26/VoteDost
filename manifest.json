@@ -1,0 +1,17 @@
+{
+  "name": "Voter-Dost Pro",
+  "short_name": "VoterDost",
+  "description": "Your Elite Election Process Educator",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#060a14",
+  "theme_color": "#ff9933",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/bottts/svg?seed=VoterDost",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

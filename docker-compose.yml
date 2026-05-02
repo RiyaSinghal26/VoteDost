@@ -1,0 +1,7 @@
+services:
+  voter-dost:
+    build: .
+    ports:
+      - "8080:80"
+    container_name: voter-dost-pro
+    restart: unless-stopped

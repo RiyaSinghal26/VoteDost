@@ -1,0 +1,9 @@
+.git
+.gemini
+Dockerfile
+docker-compose.yml
+implementation_plan.md
+task.md
+walkthrough.md
+node_modules
+npm-debug.log
