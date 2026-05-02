@@ -1,4 +1,4 @@
-const CACHE_NAME = 'voter-dost-v1.1'; // Bumped version
+const CACHE_NAME = 'voter-dost-v1.2'; // Bumped for fresh install
 const ASSETS = [
     'index.html',
     'styles.css',
@@ -12,7 +12,6 @@ self.addEventListener('install', (e) => {
     self.skipWaiting(); // Force the waiting service worker to become the active service worker.
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            console.log('[SW] Caching static assets');
             return cache.addAll(ASSETS);
         })
     );
@@ -25,7 +24,6 @@ self.addEventListener('activate', (e) => {
             return Promise.all(
                 keys.map((key) => {
                     if (key !== CACHE_NAME) {
-                        console.log('[SW] Clearing old cache:', key);
                         return caches.delete(key);
                     }
                 })

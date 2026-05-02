@@ -6,15 +6,13 @@
 self.onmessage = function(e) {
     const { action, data } = e.data;
 
-    console.log('[Worker] Action received:', action);
-
     switch(action) {
         case 'load_simulation':
             // Simulate heavy asset loading/processing
             const steps = processSimulationData(data);
             self.postMessage({ action: 'simulation_ready', steps });
             break;
-        
+
         case 'audit_performance':
             // Simulate a background audit logic
             const score = calculateScore(data);
@@ -22,7 +20,8 @@ self.onmessage = function(e) {
             break;
 
         default:
-            console.warn('[Worker] Unknown action:', action);
+            // Unknown action — silently ignore in production
+            break;
     }
 };
 

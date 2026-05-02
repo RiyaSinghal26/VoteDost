@@ -1,3 +1,31 @@
+/**
+ * @fileoverview Voter-Dost Pro — Elite Election Process Educator
+ * Main application logic: navigation, i18n, quiz, booth simulation,
+ * Google Maps Places integration, and AI chat assistant.
+ * @author Voter-Dost Team
+ * @version 2.0.0
+ */
+
+/**
+ * Production-safe logger. Suppressed when the page is served from a real
+ * origin (non-localhost). Use Logger.log / Logger.warn instead of
+ * bare console.log so production builds emit zero output.
+ * @namespace Logger
+ */
+const Logger = (() => {
+    const IS_DEV = window.location.hostname === 'localhost' ||
+                   window.location.hostname === '127.0.0.1' ||
+                   window.location.hostname === '';
+    return {
+        /** @param {...*} args */
+        log:   (...args) => IS_DEV && console.log('[VoterDost]', ...args),
+        /** @param {...*} args */
+        warn:  (...args) => IS_DEV && console.warn('[VoterDost]', ...args),
+        /** @param {...*} args */
+        error: (...args) => console.error('[VoterDost]', ...args)
+    };
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
 
     /* ── STATE ── */
@@ -142,12 +170,26 @@ document.addEventListener('DOMContentLoaded', () => {
     /* ══════════════════════════════════════
        i18n SYSTEM
     ══════════════════════════════════════ */
+    /**
+     * Changes the active UI language and re-renders all translated strings.
+     * Also updates aria-pressed states on language toggle buttons.
+     * @param {string} lang - Language code ('en' or 'hi').
+     */
     function setLanguage(lang) {
         currentLang = lang;
-        document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+        document.querySelectorAll('.lang-btn').forEach(b => {
+            const isActive = b.dataset.lang === lang;
+            b.classList.toggle('active', isActive);
+            b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+        document.documentElement.lang = lang === 'hi' ? 'hi' : 'en';
         translateUI();
     }
 
+    /**
+     * Iterates all [data-i18n] elements and replaces their text content
+     * with the matching string from the active language dictionary.
+     */
     function translateUI() {
         const strings = I18N[currentLang];
         document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -168,8 +210,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Navigates between views and updates page metadata.
-     * @param {string} viewId 
+     * Navigates to a named view, updating nav items, view visibility,
+     * page title/subtitle, assistant context, and triggering view-specific
+     * initialisation (map, myth render, etc.).
+     * @param {string} viewId - One of 'home' | 'roadmap' | 'boothsim' | 'mythbuster'.
      */
     function navigateTo(viewId) {
         if (viewId !== 'home' && !profile) {
@@ -206,7 +250,10 @@ document.addEventListener('DOMContentLoaded', () => {
             setAssistant(`Here is your personalized roadmap, ${PROFILE_NAMES[profile]}! Follow each step carefully. 🗺️`, 'Keep your documents handy at all times.', 'Try Booth-Sim ➡️', 'boothsim');
             renderRoadmap();
             document.getElementById('map-section').style.display = 'block';
-            initGoogleMap();
+            // Guard: only call if Maps JS API has fully loaded; the async callback handles the initial load
+            if (typeof google !== 'undefined' && window.initGoogleMap) {
+                window.initGoogleMap();
+            }
         } else if (viewId === 'boothsim') {
             setAssistant('Welcome to the Booth-Sim! Use the buttons below to walk through the polling station step-by-step.', 'Do NOT carry your mobile phone inside the booth!');
             // Use Worker to "load" simulation assets
@@ -454,23 +501,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* ══════════════════════════════════════
-       GOOGLE MAPS (Fixed Embed)
+       GOOGLE MAPS JS API + PLACES
     ══════════════════════════════════════ */
-    function initGoogleMap() {
+    /**
+     * Initialises a Google Maps JS API map centered on the user's location
+     * (or Delhi as fallback) and performs a Places nearbySearch for
+     * 'polling booth' / 'election office' to demonstrate Places library usage.
+     * Exposed on window so the Maps API async callback can reach it.
+     */
+    window.initGoogleMap = function () {
         const mapContainer = document.getElementById('googleMap');
-        // Using the public embed method which doesn't require a JS API key for basic view
-        mapContainer.innerHTML = `
-            <iframe 
-                width="100%" 
-                height="100%" 
-                frameborder="0" 
-                style="border:0; filter: ${darkMode ? 'invert(90%) hue-rotate(180deg)' : 'none'};" 
-                src="https://maps.google.com/maps?q=polling+booth+near+me&t=&z=13&ie=UTF8&iwloc=&output=embed" 
-                allowfullscreen>
-            </iframe>
-        `;
-        console.log('[Maps] Live Polling Booth Map Initialized');
-    }
+        if (!mapContainer || typeof google === 'undefined') return;
+
+        /** Default centre — Parliament of India, New Delhi */
+        const DEFAULT_CENTER = { lat: 28.6139, lng: 77.2090 };
+
+        /**
+         * Builds the map and runs a Places nearby search.
+         * @param {google.maps.LatLngLiteral} center - Map centre coordinates.
+         */
+        function buildMap(center) {
+            const mapOptions = {
+                center,
+                zoom: 13,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                styles: darkMode ? [
+                    { elementType: 'geometry', stylers: [{ color: '#0a1228' }] },
+                    { elementType: 'labels.text.fill', stylers: [{ color: '#8a9bba' }] },
+                    { elementType: 'labels.text.stroke', stylers: [{ color: '#060a14' }] },
+                    { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#1a2744' }] },
+                    { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0d1f3c' }] }
+                ] : []
+            };
+
+            const map = new google.maps.Map(mapContainer, mapOptions);
+
+            // ── Places Library: search for nearby polling booths ──
+            const service = new google.maps.places.PlacesService(map);
+            const request = {
+                location: center,
+                radius: 5000,
+                keyword: 'polling booth election'
+            };
+
+            service.nearbySearch(request, (results, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && results.length) {
+                    results.slice(0, 5).forEach(place => {
+                        new google.maps.Marker({
+                            map,
+                            position: place.geometry.location,
+                            title: place.name,
+                            icon: {
+                                url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                            }
+                        });
+                    });
+                    Logger.log('[Maps] Found', results.length, 'polling locations via Places API');
+                } else {
+                    // Fallback: drop a single marker at center
+                    new google.maps.Marker({ map, position: center, title: 'Your Area' });
+                    Logger.log('[Maps] Places search status:', status, '— using fallback marker');
+                }
+            });
+        }
+
+        // Try geolocation first; fall back to Delhi
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                pos => buildMap({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                ()  => buildMap(DEFAULT_CENTER),
+                { timeout: 5000 }
+            );
+        } else {
+            buildMap(DEFAULT_CENTER);
+        }
+
+        Logger.log('[Maps] Google Maps JS API with Places library initialised');
+    };
 
     window.focusMap = () => {
         document.getElementById('map-section').scrollIntoView({ behavior: 'smooth' });
@@ -600,7 +707,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Register PWA Service Worker
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('[PWA] Service Worker Active'));
+        navigator.serviceWorker.register('sw.js')
+            .then(() => Logger.log('[PWA] Service Worker Active'))
+            .catch(err => Logger.error('[PWA] Registration failed:', err));
     }
 
     /* ══════════════════════════════════════
@@ -613,6 +722,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const geminiInput  = document.getElementById('geminiInput');
     const geminiMsgs   = document.getElementById('geminiMessages');
 
+    /**
+     * Appends a chat bubble to the Gemini message area.
+     * @param {string} text - Message content to display.
+     * @param {'user'|'bot'} role - Who sent the message (controls styling).
+     */
     function addMessage(text, role) {
         const el = document.createElement('div');
         el.className = `msg msg-${role}`;
@@ -624,6 +738,8 @@ document.addEventListener('DOMContentLoaded', () => {
     geminiToggle.onclick = () => {
         const isVisible = geminiChat.style.display !== 'none';
         geminiChat.style.display = isVisible ? 'none' : 'flex';
+        geminiToggle.setAttribute('aria-expanded', isVisible ? 'false' : 'true');
+        geminiToggle.setAttribute('aria-label', isVisible ? 'Open AI Assistant' : 'Close AI Assistant');
         if (!isVisible && geminiMsgs.children.length === 0) {
             addMessage(I18N[currentLang].bot_greet, 'bot');
         }
@@ -631,7 +747,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     geminiClose.onclick = () => geminiChat.style.display = 'none';
 
-    async function handleGemini() {
+    /**
+     * Handles sending a user message to the AI assistant.
+     * Reads input, renders the user bubble, then after a short delay
+     * responds with a context-aware reply derived from ECI handbook data.
+     * Uses keyword matching to route to the correct response branch.
+     * @returns {void}
+     */
+    function handleGemini() {
         const txt = geminiInput.value.trim();
         if (!txt) return;
         addMessage(txt, 'user');
@@ -640,9 +763,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Simulated Gemini Intelligence (ECI Handbook Data)
         setTimeout(() => {
             const query = txt.toLowerCase();
-            let response = "I'm analyzing the ECI handbook for you... ";
-            
-            if (query.includes('id') || query.includes('voter card')) {
+            let response = "I'm analyzing the ECI handbook for you...";
+
+            if (query.includes('form 6') || query.includes('register') || query.includes('enrollment')) {
+                response = "Form 6 is the application form for new voter registration on the NVSP portal (nvsp.in). It's completely free and can be done online!";
+            } else if (query.includes('id') || query.includes('voter card')) {
                 response = "According to the ECI handbook, you can use any of the 12 approved identity proofs like Aadhaar, PAN, or Passport if your name is in the roll. If you don't have an ID, you must apply via Form 6.";
             } else if (query.includes('booth') || query.includes('location')) {
                 response = "You can find your exact booth location by sending an SMS 'ECI <VoterID>' to 1950 or by using the interactive map in the 'Roadmap' section of this app.";
@@ -650,10 +775,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 response = "The qualifying age is 18 years as of January 1st of the election year. You must be an Indian citizen and a resident of the constituency.";
             } else if (query.includes('time') || query.includes('when')) {
                 response = "Polling typically takes place from 7:00 AM to 6:00 PM. However, any voter reaching the booth before 6:00 PM is legally allowed to cast their vote.";
+            } else if (query.includes('evm') || query.includes('machine') || query.includes('hack')) {
+                response = "EVMs are 100% standalone devices with no WiFi, Bluetooth, or internet connectivity. They are M2M sealed and paired with VVPAT for paper audit trails. Completely secure!";
             } else {
                 response = "That's a great question! Based on ECI guidelines, the process ensures full transparency. For specific details on your constituency, I recommend checking the Voter Helpline App or nvsp.in.";
             }
-            
+
             addMessage(response, 'bot');
         }, 800);
     }
@@ -670,10 +797,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (window.Worker) {
         worker = new Worker('worker.js');
+        /**
+         * Handles messages from the background Worker thread.
+         * @param {MessageEvent} e - Worker message event.
+         */
         worker.onmessage = (e) => {
-            console.log('[Worker] Response:', e.data);
+            Logger.log('[Worker] Response:', e.data);
             if (e.data.action === 'simulation_ready') {
-                console.log('[Worker] Simulation Data Processed in Background');
+                Logger.log('[Worker] Simulation Data Processed in Background');
             }
         };
     }

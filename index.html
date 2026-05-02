@@ -33,8 +33,10 @@
     </style>
 
     <link rel="stylesheet" href="styles.css?v=elite">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <!-- Google Maps JavaScript API with Places Library -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFMBWY&libraries=places&callback=initGoogleMap" async defer></script>
 </head>
 <body>
     <!-- Animated Cyber Background -->
@@ -106,9 +108,9 @@
                     <p class="page-sub" id="pageSub" data-i18n="welcome_sub">Your Elite Election Process Educator</p>
                 </div>
                 <div class="header-actions">
-                    <div class="lang-toggle glass-inner">
-                        <button class="lang-btn active" data-lang="en">EN</button>
-                        <button class="lang-btn" data-lang="hi">HI</button>
+                    <div class="lang-toggle glass-inner" role="group" aria-label="Language selection">
+                        <button class="lang-btn active" data-lang="en" aria-label="Switch to English" aria-pressed="true">EN</button>
+                        <button class="lang-btn" data-lang="hi" aria-label="Switch to Hindi" aria-pressed="false">HI</button>
                     </div>
                     <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Switch to light mode">
                         <i class="fa-solid fa-moon" aria-hidden="true"></i>
@@ -154,7 +156,7 @@
                                 <div id="quizContent">
                                     <!-- Dynamic Quiz -->
                                 </div>
-                                <button class="btn-close-quiz" id="closeQuiz">×</button>
+                                <button class="btn-close-quiz" id="closeQuiz" aria-label="Close quiz">×</button>
                             </div>
                         </div>
                     </div>
@@ -216,16 +218,16 @@
     </div><!-- /.app-shell -->
 
     <div id="geminiBot" class="gemini-bot-container">
-        <button id="geminiToggle" class="gemini-toggle"><i class="fa-solid fa-robot"></i></button>
-        <div id="geminiChat" class="gemini-chat glass" style="display:none;">
+        <button id="geminiToggle" class="gemini-toggle" aria-label="Open AI Assistant" aria-expanded="false" aria-controls="geminiChat"><i class="fa-solid fa-robot" aria-hidden="true"></i></button>
+        <div id="geminiChat" class="gemini-chat glass" style="display:none;" role="dialog" aria-modal="true" aria-label="Voter-Dost AI Assistant">
             <div class="gemini-header">
                 <h3>Voter-Dost AI</h3>
-                <button id="closeGemini">×</button>
+                <button id="closeGemini" aria-label="Close AI Assistant">×</button>
             </div>
-            <div id="geminiMessages" class="gemini-messages"></div>
+            <div id="geminiMessages" class="gemini-messages" aria-live="polite" aria-label="Chat messages"></div>
             <div class="gemini-input-area">
-                <input type="text" id="geminiInput" placeholder="Ask anything about voting...">
-                <button id="geminiSend"><i class="fa-solid fa-paper-plane"></i></button>
+                <input type="text" id="geminiInput" placeholder="Ask anything about voting..." aria-label="Type your question about voting">
+                <button id="geminiSend" aria-label="Send message"><i class="fa-solid fa-paper-plane" aria-hidden="true"></i></button>
             </div>
         </div>
     </div>
