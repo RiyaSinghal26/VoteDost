@@ -1,16 +1,15 @@
-const CACHE_NAME = 'voter-dost-v1';
+const CACHE_NAME = 'voter-dost-v1.1'; // Bumped version
 const ASSETS = [
     'index.html',
     'styles.css',
     'script.js',
-    'manifest.json',
-    'https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-    'https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js'
+    'worker.js',
+    'manifest.json'
 ];
 
 // Install Event
 self.addEventListener('install', (e) => {
+    self.skipWaiting(); // Force the waiting service worker to become the active service worker.
     e.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
             console.log('[SW] Caching static assets');
@@ -19,18 +18,25 @@ self.addEventListener('install', (e) => {
     );
 });
 
-// Fetch Event (Stale-while-revalidate)
+// Activate Event - Clear old caches
+self.addEventListener('activate', (e) => {
+    e.waitUntil(
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) {
+                        console.log('[SW] Clearing old cache:', key);
+                        return caches.delete(key);
+                    }
+                })
+            );
+        })
+    );
+});
+
+// Fetch Event (Network-first for development, fallback to cache)
 self.addEventListener('fetch', (e) => {
     e.respondWith(
-        caches.match(e.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                // Return cached version but fetch update in background
-                fetch(e.request).then((networkResponse) => {
-                    caches.open(CACHE_NAME).then((cache) => cache.put(e.request, networkResponse));
-                });
-                return cachedResponse;
-            }
-            return fetch(e.request);
-        })
+        fetch(e.request).catch(() => caches.match(e.request))
     );
 });

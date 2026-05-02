@@ -12,12 +12,29 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="apple-touch-icon" href="https://api.dicebear.com/7.x/bottts/svg?seed=VoterDost">
     
-    <!-- Security: CSP (Allowing trusted CDNs) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://api.dicebear.com 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' https://api.dicebear.com data:; connect-src 'self' https://api.dicebear.com;">
+    <!-- Security: CSP is handled by Nginx for better control -->
+
+    <!-- Critical CSS (Inlined for Performance) -->
+    <style>
+        :root {
+            --bg: #060a14; --col-1: #0a1228; --txt: #f0f4f8; --txt2: #8a9bba;
+            --saffron: #ff9933; --saffron-g: rgba(255,153,51,0.35);
+            --green: #00e676; --green-g: rgba(0,230,118,0.25);
+            --blue: #3d5afe; --blue-g: rgba(61,90,254,0.3);
+            --glass: rgba(10,18,40,0.65); --glass-b: rgba(255,255,255,0.08);
+            --r: 20px; --sidebar: 280px;
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; overflow: hidden; }
+        .app-shell { display: flex; height: 100vh; padding: 14px; gap: 14px; position: relative; z-index: 1; }
+        .sidebar { width: var(--sidebar); flex-shrink: 0; display: flex; flex-direction: column; padding: 24px 18px; gap: 6px; overflow-y: auto; overflow-x: hidden; }
+        .glass { background: var(--glass); backdrop-filter: blur(22px); border: 1px solid var(--glass-b); border-radius: var(--r); }
+        .main-area { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow: hidden; }
+    </style>
 
     <link rel="stylesheet" href="styles.css?v=elite">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer">
 </head>
 <body>
     <!-- Animated Cyber Background -->
@@ -56,10 +73,10 @@
             </div>
 
             <ul class="nav-list" role="navigation" aria-label="Main Navigation">
-                <li class="nav-item active" data-view="home" tabindex="0" role="button" aria-label="Go to Home"><i class="fa-solid fa-house" aria-hidden="true"></i> Home</li>
-                <li class="nav-item" data-view="roadmap" tabindex="0" role="button" aria-label="View Your Roadmap"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> Your Roadmap</li>
-                <li class="nav-item" data-view="boothsim" tabindex="0" role="button" aria-label="Open Booth Simulation"><i class="fa-solid fa-person-booth" aria-hidden="true"></i> Booth-Sim</li>
-                <li class="nav-item" data-view="mythbuster" tabindex="0" role="button" aria-label="View Myth-Busters"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Myth-Busters</li>
+                <li class="nav-item active" data-view="home" tabindex="0" role="button" aria-label="Go to Home" id="nav-home"><i class="fa-solid fa-house" aria-hidden="true"></i> <span data-i18n="nav_home">Home</span></li>
+                <li class="nav-item" data-view="roadmap" tabindex="0" role="button" aria-label="View Your Roadmap" id="nav-roadmap"><i class="fa-solid fa-map-location-dot" aria-hidden="true"></i> <span data-i18n="nav_roadmap">Your Roadmap</span></li>
+                <li class="nav-item" data-view="boothsim" tabindex="0" role="button" aria-label="Open Booth Simulation" id="nav-boothsim"><i class="fa-solid fa-person-booth" aria-hidden="true"></i> <span data-i18n="nav_boothsim">Booth-Sim</span></li>
+                <li class="nav-item" data-view="mythbuster" tabindex="0" role="button" aria-label="View Myth-Busters" id="nav-mythbuster"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> <span data-i18n="nav_mythbuster">Myth-Busters</span></li>
             </ul>
 
             <div class="profile-widget" aria-live="polite">
@@ -85,12 +102,18 @@
             <!-- Header -->
             <header class="top-bar glass">
                 <div>
-                    <h1 class="page-title" id="pageTitle">Welcome to Voter-Dost! 🇮🇳</h1>
-                    <p class="page-sub" id="pageSub">Your Elite Election Process Educator</p>
+                    <h1 class="page-title" id="pageTitle" data-i18n="welcome_title">Welcome to Voter-Dost! 🇮🇳</h1>
+                    <p class="page-sub" id="pageSub" data-i18n="welcome_sub">Your Elite Election Process Educator</p>
                 </div>
-                <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Switch to light mode">
-                    <i class="fa-solid fa-moon" aria-hidden="true"></i>
-                </button>
+                <div class="header-actions">
+                    <div class="lang-toggle glass-inner">
+                        <button class="lang-btn active" data-lang="en">EN</button>
+                        <button class="lang-btn" data-lang="hi">HI</button>
+                    </div>
+                    <button class="theme-btn" id="themeBtn" title="Toggle theme" aria-label="Switch to light mode">
+                        <i class="fa-solid fa-moon" aria-hidden="true"></i>
+                    </button>
+                </div>
             </header>
 
             <!-- Views -->
@@ -140,8 +163,13 @@
                 <!-- ROADMAP -->
                 <section class="view" id="view-roadmap">
                     <div class="glass content-box">
-                        <h2>📍 Your Journey to the Ballot</h2>
-                        <p id="roadmapIntro" class="content-sub">Let's walk through the exact steps you need to take.</p>
+                        <h2 data-i18n="roadmap_title">📍 Your Journey to the Ballot</h2>
+                        <p id="roadmapIntro" class="content-sub" data-i18n="roadmap_sub">Let's walk through the exact steps you need to take.</p>
+                        
+                        <div id="map-section" class="map-container glass-inner" style="display:none; margin: 20px 0; height: 300px; border-radius: 12px; overflow: hidden;">
+                            <div id="googleMap" style="height: 100%; width: 100%;"></div>
+                        </div>
+
                         <div class="timeline" id="roadmapTimeline"></div>
                     </div>
                 </section>
@@ -187,7 +215,22 @@
         </main>
     </div><!-- /.app-shell -->
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <div id="geminiBot" class="gemini-bot-container">
+        <button id="geminiToggle" class="gemini-toggle"><i class="fa-solid fa-robot"></i></button>
+        <div id="geminiChat" class="gemini-chat glass" style="display:none;">
+            <div class="gemini-header">
+                <h3>Voter-Dost AI</h3>
+                <button id="closeGemini">×</button>
+            </div>
+            <div id="geminiMessages" class="gemini-messages"></div>
+            <div class="gemini-input-area">
+                <input type="text" id="geminiInput" placeholder="Ask anything about voting...">
+                <button id="geminiSend"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js" integrity="sha512-RX/OFugt/bkgwRQg4B22KYE79dQhwaPp2IZaA/YyU3GMo/qY7GrXkiG6Dvvwnds6/DefCfwPTgCXnaC6nAgVYw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="script.js?v=final"></script>
 </body>
 </html>

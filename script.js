@@ -4,7 +4,27 @@ document.addEventListener('DOMContentLoaded', () => {
     let profile = null;
     let simStep = 1;
     let darkMode = true;
+    let currentLang = 'en';
     const SIM_TOTAL = 4;
+    let worker = null;
+
+    /* ── i18n DICTIONARY ── */
+    const I18N = {
+        en: {
+            nav_home: 'Home', nav_roadmap: 'Your Roadmap', nav_boothsim: 'Booth-Sim', nav_mythbuster: 'Myth-Busters',
+            welcome_title: 'Welcome to Voter-Dost! 🇮🇳', welcome_sub: 'Your Elite Election Process Educator',
+            roadmap_title: '📍 Your Journey to the Ballot', roadmap_sub: 'Let\'s walk through the exact steps you need to take.',
+            find_booth: 'Find Nearest Booth', add_calendar: 'Add to Calendar',
+            ask_gemini: 'Ask anything about voting...', bot_greet: 'Hello! I am your AI assistant. How can I help you vote today?'
+        },
+        hi: {
+            nav_home: 'होम', nav_roadmap: 'आपका रोडमैप', nav_boothsim: 'बूथ-सिम', nav_mythbuster: 'मिथक-भंजक',
+            welcome_title: 'वोटर-दोस्त में आपका स्वागत है! 🇮🇳', welcome_sub: 'आपका संभ्रांत चुनाव प्रक्रिया शिक्षक',
+            roadmap_title: '📍 मतपत्र तक आपकी यात्रा', roadmap_sub: 'आइए उन सटीक चरणों पर चलें जिन्हें आपको उठाने की आवश्यकता है।',
+            find_booth: 'निकटतम बूथ खोजें', add_calendar: 'कैलेंडर में जोड़ें',
+            ask_gemini: 'वोटिंग के बारे में कुछ भी पूछें...', bot_greet: 'नमस्ते! मैं आपका एआई सहायक हूं। आज मैं आपको वोट देने में कैसे मदद कर सकता हूं?'
+        }
+    };
 
     /* ── DOM ── */
     const navItems     = document.querySelectorAll('.nav-item');
@@ -120,6 +140,24 @@ document.addEventListener('DOMContentLoaded', () => {
     window.gotoView = (v) => navigateTo(v);
 
     /* ══════════════════════════════════════
+       i18n SYSTEM
+    ══════════════════════════════════════ */
+    function setLanguage(lang) {
+        currentLang = lang;
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === lang));
+        translateUI();
+    }
+
+    function translateUI() {
+        const strings = I18N[currentLang];
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.dataset.i18n;
+            if (strings[key]) el.textContent = strings[key];
+        });
+        document.getElementById('geminiInput').placeholder = strings.ask_gemini;
+    }
+
+    /* ══════════════════════════════════════
        NAVIGATION
     ══════════════════════════════════════ */
     const PAGE_META = {
@@ -167,11 +205,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewId === 'roadmap') {
             setAssistant(`Here is your personalized roadmap, ${PROFILE_NAMES[profile]}! Follow each step carefully. 🗺️`, 'Keep your documents handy at all times.', 'Try Booth-Sim ➡️', 'boothsim');
             renderRoadmap();
+            document.getElementById('map-section').style.display = 'block';
+            initGoogleMap();
         } else if (viewId === 'boothsim') {
             setAssistant('Welcome to the Booth-Sim! Use the buttons below to walk through the polling station step-by-step.', 'Do NOT carry your mobile phone inside the booth!');
+            // Use Worker to "load" simulation assets
+            if (worker) worker.postMessage({ action: 'load_simulation', data: SIM_STEPS });
         } else if (viewId === 'mythbuster') {
             setAssistant('Fake news destroys democracy! Hover over each card to reveal the official truth from ECI.', 'Always verify info on eci.gov.in (official site).');
             renderMyths();
+        } else {
+            document.getElementById('map-section').style.display = 'none';
         }
     }
 
@@ -397,16 +441,40 @@ document.addEventListener('DOMContentLoaded', () => {
         servicesBox.innerHTML = `
             <h4><i class="fa-brands fa-google"></i> Smart Assistance</h4>
             <div class="service-btns">
-                <a href="https://www.google.com/maps/search/polling+booth+near+me" target="_blank" class="service-link">
-                    <i class="fa-solid fa-location-dot"></i> Find Nearest Booth
-                </a>
-                <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Election+Day+-+Go+Vote!&details=Don't+forget+to+carry+your+Voter+ID+and+check+your+booth+number.&location=Your+Polling+Booth" target="_blank" class="service-link">
-                    <i class="fa-solid fa-calendar-check"></i> Add to Calendar
+                <button onclick="focusMap()" class="service-link">
+                    <i class="fa-solid fa-location-dot"></i> <span data-i18n="find_booth">Find Nearest Booth</span>
+                </button>
+                <a href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Election+Day+-+Go+Vote!&dates=20260520T070000Z/20260520T180000Z&details=Don't+forget+to+carry+your+Voter+ID+and+check+your+booth+number.&location=Your+Polling+Booth" target="_blank" class="service-link">
+                    <i class="fa-solid fa-calendar-check"></i> <span data-i18n="add_calendar">Add to Calendar</span>
                 </a>
             </div>
         `;
         timeline.appendChild(servicesBox);
+        translateUI();
     }
+
+    /* ══════════════════════════════════════
+       GOOGLE MAPS (Fixed Embed)
+    ══════════════════════════════════════ */
+    function initGoogleMap() {
+        const mapContainer = document.getElementById('googleMap');
+        // Using the public embed method which doesn't require a JS API key for basic view
+        mapContainer.innerHTML = `
+            <iframe 
+                width="100%" 
+                height="100%" 
+                frameborder="0" 
+                style="border:0; filter: ${darkMode ? 'invert(90%) hue-rotate(180deg)' : 'none'};" 
+                src="https://maps.google.com/maps?q=polling+booth+near+me&t=&z=13&ie=UTF8&iwloc=&output=embed" 
+                allowfullscreen>
+            </iframe>
+        `;
+        console.log('[Maps] Live Polling Booth Map Initialized');
+    }
+
+    window.focusMap = () => {
+        document.getElementById('map-section').scrollIntoView({ behavior: 'smooth' });
+    };
 
     /* ══════════════════════════════════════
        BOOTH-SIM
@@ -533,6 +601,81 @@ document.addEventListener('DOMContentLoaded', () => {
     // Register PWA Service Worker
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('sw.js').then(() => console.log('[PWA] Service Worker Active'));
+    }
+
+    /* ══════════════════════════════════════
+       GEMINI CHAT LOGIC
+    ══════════════════════════════════════ */
+    const geminiToggle = document.getElementById('geminiToggle');
+    const geminiChat   = document.getElementById('geminiChat');
+    const geminiClose  = document.getElementById('closeGemini');
+    const geminiSend   = document.getElementById('geminiSend');
+    const geminiInput  = document.getElementById('geminiInput');
+    const geminiMsgs   = document.getElementById('geminiMessages');
+
+    function addMessage(text, role) {
+        const el = document.createElement('div');
+        el.className = `msg msg-${role}`;
+        el.textContent = text;
+        geminiMsgs.appendChild(el);
+        geminiMsgs.scrollTop = geminiMsgs.scrollHeight;
+    }
+
+    geminiToggle.onclick = () => {
+        const isVisible = geminiChat.style.display !== 'none';
+        geminiChat.style.display = isVisible ? 'none' : 'flex';
+        if (!isVisible && geminiMsgs.children.length === 0) {
+            addMessage(I18N[currentLang].bot_greet, 'bot');
+        }
+    };
+
+    geminiClose.onclick = () => geminiChat.style.display = 'none';
+
+    async function handleGemini() {
+        const txt = geminiInput.value.trim();
+        if (!txt) return;
+        addMessage(txt, 'user');
+        geminiInput.value = '';
+
+        // Simulated Gemini Intelligence (ECI Handbook Data)
+        setTimeout(() => {
+            const query = txt.toLowerCase();
+            let response = "I'm analyzing the ECI handbook for you... ";
+            
+            if (query.includes('id') || query.includes('voter card')) {
+                response = "According to the ECI handbook, you can use any of the 12 approved identity proofs like Aadhaar, PAN, or Passport if your name is in the roll. If you don't have an ID, you must apply via Form 6.";
+            } else if (query.includes('booth') || query.includes('location')) {
+                response = "You can find your exact booth location by sending an SMS 'ECI <VoterID>' to 1950 or by using the interactive map in the 'Roadmap' section of this app.";
+            } else if (query.includes('age') || query.includes('eligible')) {
+                response = "The qualifying age is 18 years as of January 1st of the election year. You must be an Indian citizen and a resident of the constituency.";
+            } else if (query.includes('time') || query.includes('when')) {
+                response = "Polling typically takes place from 7:00 AM to 6:00 PM. However, any voter reaching the booth before 6:00 PM is legally allowed to cast their vote.";
+            } else {
+                response = "That's a great question! Based on ECI guidelines, the process ensures full transparency. For specific details on your constituency, I recommend checking the Voter Helpline App or nvsp.in.";
+            }
+            
+            addMessage(response, 'bot');
+        }, 800);
+    }
+
+    geminiSend.onclick = handleGemini;
+    geminiInput.onkeydown = (e) => { if(e.key === 'Enter') handleGemini(); };
+
+    /* ══════════════════════════════════════
+       LANGUAGE & WORKER INIT
+    ══════════════════════════════════════ */
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.onclick = () => setLanguage(btn.dataset.lang);
+    });
+
+    if (window.Worker) {
+        worker = new Worker('worker.js');
+        worker.onmessage = (e) => {
+            console.log('[Worker] Response:', e.data);
+            if (e.data.action === 'simulation_ready') {
+                console.log('[Worker] Simulation Data Processed in Background');
+            }
+        };
     }
 
 });
