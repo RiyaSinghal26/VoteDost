@@ -28,13 +28,21 @@ const Logger = (() => {
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    /* ── STATE ── */
-    let profile = null;
-    let simStep = 1;
-    let darkMode = true;
-    let currentLang = 'en';
+    /* ── PROTECTED STATE OBJECT ── */
+    /**
+     * Centralised application state. Using a single object avoids polluting
+     * the closure scope with many loose variables and makes state transitions
+     * explicit and auditable — a best-practice pattern for maintainability.
+     * @type {{ profile: string|null, simStep: number, darkMode: boolean, currentLang: string, worker: Worker|null }}
+     */
+    const AppState = {
+        profile:     null,
+        simStep:     1,
+        darkMode:    true,
+        currentLang: 'en',
+        worker:      null
+    };
     const SIM_TOTAL = 4;
-    let worker = null;
 
     /* ── i18n DICTIONARY ── */
     const I18N = {
@@ -176,7 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} lang - Language code ('en' or 'hi').
      */
     function setLanguage(lang) {
-        currentLang = lang;
+        AppState.currentLang = lang;
         document.querySelectorAll('.lang-btn').forEach(b => {
             const isActive = b.dataset.lang === lang;
             b.classList.toggle('active', isActive);
@@ -191,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * with the matching string from the active language dictionary.
      */
     function translateUI() {
-        const strings = I18N[currentLang];
+        const strings = I18N[AppState.currentLang];
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.dataset.i18n;
             if (strings[key]) el.textContent = strings[key];
@@ -216,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} viewId - One of 'home' | 'roadmap' | 'boothsim' | 'mythbuster'.
      */
     function navigateTo(viewId) {
-        if (viewId !== 'home' && !profile) {
+        if (viewId !== 'home' && !AppState.profile) {
             setAssistant('Arey! 🛑 Please select your profile on the Home page first so I can personalise your experience!', 'Profiling helps me help YOU better.');
             return;
         }
@@ -247,7 +255,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Context
         if (viewId === 'roadmap') {
-            setAssistant(`Here is your personalized roadmap, ${PROFILE_NAMES[profile]}! Follow each step carefully. 🗺️`, 'Keep your documents handy at all times.', 'Try Booth-Sim ➡️', 'boothsim');
+            setAssistant(`Here is your personalized roadmap, ${PROFILE_NAMES[AppState.profile]}! Follow each step carefully. 🗺️`, 'Keep your documents handy at all times.', 'Try Booth-Sim ➡️', 'boothsim');
             renderRoadmap();
             document.getElementById('map-section').style.display = 'block';
             // Guard: only call if Maps JS API has fully loaded; the async callback handles the initial load
@@ -257,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (viewId === 'boothsim') {
             setAssistant('Welcome to the Booth-Sim! Use the buttons below to walk through the polling station step-by-step.', 'Do NOT carry your mobile phone inside the booth!');
             // Use Worker to "load" simulation assets
-            if (worker) worker.postMessage({ action: 'load_simulation', data: SIM_STEPS });
+            if (AppState.worker) AppState.worker.postMessage({ action: 'load_simulation', data: SIM_STEPS });
         } else if (viewId === 'mythbuster') {
             setAssistant('Fake news destroys democracy! Hover over each card to reveal the official truth from ECI.', 'Always verify info on eci.gov.in (official site).');
             renderMyths();
@@ -284,8 +292,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {string} profId 
      */
     function setProfile(profId) {
-        profile = profId;
-        const name = PROFILE_NAMES[profile];
+        AppState.profile = profId;
+        const name = PROFILE_NAMES[AppState.profile];
 
         pCards.forEach(c => {
             const isSel = c.dataset.profile === profId;
@@ -297,7 +305,7 @@ document.addEventListener('DOMContentLoaded', () => {
         profileChip.className = 'profile-chip active-chip';
 
         // Reset simulation state when profile changes
-        simStep = 1;
+        AppState.simStep = 1;
         btnNext.disabled = false;
         btnNext.classList.remove('btn-finish');
 
@@ -408,12 +416,18 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentQ = 0;
     let scores = { 'first-time': 0, 'senior': 0, 'student': 0 };
 
-    /** Starts the interactive quiz */
+    /** Starts the interactive quiz and moves focus inside the modal for accessibility. */
     function startQuiz() {
         quizOverlay.classList.add('active');
+        quizOverlay.removeAttribute('aria-hidden');
         currentQ = 0;
         scores = { 'first-time': 0, 'senior': 0, 'student': 0 };
         renderQuiz();
+        // Focus management: move keyboard focus inside the modal
+        requestAnimationFrame(() => {
+            const firstFocusable = quizOverlay.querySelector('button, [tabindex]:not([tabindex="-1"])');
+            if (firstFocusable) firstFocusable.focus();
+        });
     }
 
     /** Renders the current quiz question */
@@ -590,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
      * Renders the current step of the booth simulation.
      */
     function renderSim() {
-        const data = SIM_STEPS[simStep - 1];
+        const data = SIM_STEPS[AppState.simStep - 1];
         if (!data) return;
 
         // Stage content
@@ -623,13 +637,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Progress bar
-        simProgressBar.style.width = `${(simStep / SIM_TOTAL) * 100}%`;
+        simProgressBar.style.width = `${(AppState.simStep / SIM_TOTAL) * 100}%`;
 
         // Buttons
-        btnBack.disabled = (simStep === 1);
-        btnNext.disabled = false; 
+        btnBack.disabled = (AppState.simStep === 1);
+        btnNext.disabled = false;
 
-        if (simStep === SIM_TOTAL) {
+        if (AppState.simStep === SIM_TOTAL) {
             btnNext.textContent = 'Finish 🏆';
             btnNext.className = 'btn btn-primary btn-finish';
         } else {
@@ -638,9 +652,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Contextual tips
-        if (simStep === 2) setAssistant('The ink is indelible, meaning it cannot be removed easily. It stays for 2-3 weeks!', 'It is a symbol of democratic pride.');
-        if (simStep === 3) setAssistant('The Third Polling Officer ensures you are legally authorized to vote on the EVM.', 'Always follow the officer\'s instructions.');
-        if (simStep === 4) setAssistant('The VVPAT window is your verification. If you don\'t see the slip, inform the officer immediately.', 'The beep is the sound of your voice being heard!');
+        if (AppState.simStep === 2) setAssistant('The ink is indelible, meaning it cannot be removed easily. It stays for 2-3 weeks!', 'It is a symbol of democratic pride.');
+        if (AppState.simStep === 3) setAssistant('The Third Polling Officer ensures you are legally authorized to vote on the EVM.', 'Always follow the officer\'s instructions.');
+        if (AppState.simStep === 4) setAssistant('The VVPAT window is your verification. If you don\'t see the slip, inform the officer immediately.', 'The beep is the sound of your voice being heard!');
     }
 
     btnBack.addEventListener('click', (e) => {
@@ -739,9 +753,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const isVisible = geminiChat.style.display !== 'none';
         geminiChat.style.display = isVisible ? 'none' : 'flex';
         geminiToggle.setAttribute('aria-expanded', isVisible ? 'false' : 'true');
-        geminiToggle.setAttribute('aria-label', isVisible ? 'Open AI Assistant' : 'Close AI Assistant');
-        if (!isVisible && geminiMsgs.children.length === 0) {
-            addMessage(I18N[currentLang].bot_greet, 'bot');
+        geminiToggle.setAttribute('aria-label', 'Toggle AI Assistant');
+        if (!isVisible) {
+            if (geminiMsgs.children.length === 0) {
+                addMessage(I18N[AppState.currentLang].bot_greet, 'bot');
+            }
+            // Focus management
+            requestAnimationFrame(() => geminiInput.focus());
+        } else {
+            geminiToggle.focus();
         }
     };
 
