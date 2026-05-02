@@ -480,8 +480,8 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function renderRoadmap() {
         timeline.innerHTML = '';
-        if (!profile) return;
-        ROADMAPS[profile].forEach((step, i) => {
+        if (!AppState.profile) return;
+        ROADMAPS[AppState.profile].forEach((step, i) => {
             const el = document.createElement('div');
             el.className = 't-item';
             el.style.animationDelay = `${i * 0.1}s`;
